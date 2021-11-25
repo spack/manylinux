@@ -2,12 +2,6 @@ name: Build
 
 on:
   workflow_dispatch:
-    inputs:
-      useCache:
-        description: Use GHA cache
-        type: boolean
-        required: false
-        default: true
   push:
     branches-ignore:
       - "update-dependencies-pr"
@@ -27,52 +21,84 @@ concurrency:
 
 jobs:
   build_manylinux:
-    name: ${{ matrix.policy }}_${{ matrix.platform }}
-    runs-on: ubuntu-22.04
+    name: ${{ matrix.policy[0] }}
+    runs-on: ${{ matrix.policy[6] }}
     strategy:
       fail-fast: false
       matrix:
-        policy: ["manylinux2014", "musllinux_1_1", "musllinux_1_2"]
-        platform: ["i686", "x86_64"]
-        include:
-          - policy: "manylinux_2_28"
-            platform: "x86_64"
+        # 0. policy
+        # 1. base image
+        # 2. DEVTOOLSET_ROOTPATH
+        # 3. PREPEND_PATH
+        # 4. LD_LIBRARY_PATH_ARG
+        # 5. Docker platforms
+        # 6. Github Action runner
+        policy: [
+            ["manylinux2014", "centos:7",
+             "/opt/rh/devtoolset-10/root", "/opt/rh/devtoolset-10/root/usr/bin:",
+             "/opt/rh/devtoolset-10/root/usr/lib64:/opt/rh/devtoolset-10/root/usr/lib:/opt/rh/devtoolset-10/root/usr/lib64/dyninst:/opt/rh/devtoolset-10/root/usr/lib/dyninst:/usr/local/lib64",
+             "linux/amd64,linux/arm64,linux/ppc64le", self-hosted
+            ],
+            ["manylinux_2_28", "almalinux:8",
+             "/opt/rh/gcc-toolset-12/root",
+             "/opt/rh/gcc-toolset-12/root/usr/bin:",
+             "/opt/rh/gcc-toolset-12/root/usr/lib64:/opt/rh/gcc-toolset-12/root/usr/lib:/opt/rh/gcc-toolset-12/root/usr/lib64/dyninst:/opt/rh/gcc-toolset-12/root/usr/lib/dyninst",
+             'linux/amd64,linux/arm64', ubuntu-latest],
+            ["musllinux_1_1", "alpine:3.12", "", "", "", 'linux/amd64', ubuntu-latest],
+            ["musllinux_1_2", "alpine:3.18", "", "", "", 'linux/amd64', ubuntu-latest]
+        ]
 
     env:
-      POLICY: ${{ matrix.policy }}
-      PLATFORM: ${{ matrix.platform }}
+      POLICY: ${{ matrix.policy[0] }}
+      BASEIMAGE: ${{ matrix.policy[1] }}
+      DEVTOOLSET_ROOTPATH: ${{ matrix.policy[2] }}
+      PREPEND_PATH: ${{ matrix.policy[3] }}
+      LD_LIBRARY_PATH_ARG: ${{ matrix.policy[4] }}
       COMMIT_SHA: ${{ github.sha }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup tags to be used for docker images
+      - uses: docker/metadata-action@v5
+        id: docker_meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.policy[0] }}
+
       - name: Set up emulation
-        if: matrix.platform != 'i686' && matrix.platform != 'x86_64'
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: ${{ matrix.platform }}
+          platforms: ${{ matrix.policy[5] }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup cache
-        if: github.event_name != 'workflow_dispatch' || fromJSON(github.event.inputs.useCache)
-        uses: actions/cache@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          path: .buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
-          key: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}-${{ hashFiles('docker/**') }}
-          restore-keys: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}-
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build
-        run: ./build.sh
-
-      - name: Deploy
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'pypa/manylinux'
-        run: ./deploy.sh
-        env:
-          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      - name: Build and Deploy
+        uses: docker/build-push-action@v5
+        with:
+          context: docker
+          push: ${{ github.event_name == 'push' }}
+          build-args: |
+            POLICY
+            BASEIMAGE
+            DEVTOOLSET_ROOTPATH
+            PREPEND_PATH
+            LD_LIBRARY_PATH_ARG
+          platforms: ${{ matrix.policy[5] }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          # See: https://github.com/moby/buildkit#github-actions-cache-experimental
+          cache-from: |
+            ${{ steps.meta.outputs.tags }}
+          cache-to: type=inline
 
   all_passed:
     needs: [build_manylinux]
