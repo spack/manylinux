@@ -8,7 +8,7 @@ set -exuo pipefail
 # if a devel package is added to COMPILE_DEPS,
 # make sure the corresponding library is added to RUNTIME_DEPS if applicable
 
-if [ "${AUDITWHEEL_POLICY}" == "manylinux2010" ] || [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
+if [ "${AUDITWHEEL_POLICY}" == "manylinux2010" ] || [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ] || [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
 	PACKAGE_MANAGER=yum
 	COMPILE_DEPS="bzip2-devel ncurses-devel readline-devel tk-devel gdbm-devel libpcap-devel xz-devel openssl openssl-devel keyutils-libs-devel krb5-devel libcom_err-devel libidn-devel curl-devel uuid-devel libffi-devel kernel-headers"
 	if [ "${AUDITWHEEL_POLICY}" == "manylinux2010" ]; then

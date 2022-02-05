@@ -14,6 +14,10 @@ if [ "$BASE_POLICY" == "musllinux" ]; then
 	echo "Skip libxcrypt installation on musllinux"
 	exit 0
 fi
+if [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+	echo "Skip libxcrypt installation on manylinux_2_28"
+	exit 0
+fi
 
 # We need perl 5.14+
 if ! perl -e 'use 5.14.0' &> /dev/null; then
