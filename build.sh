@@ -64,6 +64,9 @@ elif [ "${POLICY}" == "manylinux_2_24" ]; then
 	LD_LIBRARY_PATH_ARG=
 elif [ "${POLICY}" == "manylinux_2_28" ]; then
 	BASEIMAGE="${MULTIARCH_PREFIX}almalinux:8"
+	if [ "${PLATFORM}" == "ppc64le" ]; then
+		BASEIMAGE="almalinux/8-base:8.5-beta-ppc64le"
+	fi
 	DEVTOOLSET_ROOTPATH="/opt/rh/gcc-toolset-11/root"
 	PREPEND_PATH="${DEVTOOLSET_ROOTPATH}/usr/bin:"
 	LD_LIBRARY_PATH_ARG="${DEVTOOLSET_ROOTPATH}/usr/lib64:${DEVTOOLSET_ROOTPATH}/usr/lib:${DEVTOOLSET_ROOTPATH}/usr/lib64/dyninst:${DEVTOOLSET_ROOTPATH}/usr/lib/dyninst"
