@@ -5,6 +5,8 @@ on:
   push:
     branches-ignore:
       - "update-dependencies-pr"
+    tags:
+      - 'v*'
     paths:
       - ".github/workflows/build.yml"
       - "docker/**"
