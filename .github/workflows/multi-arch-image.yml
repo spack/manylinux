@@ -1,0 +1,50 @@
+name: Create multi-arch image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Create multi-arch image
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+        for arch in x86_64 aarch64 ppc64le; do
+          docker pull quay.io/pypa/manylinux2014_$arch
+          docker tag quay.io/pypa/manylinux2014_$arch ghcr.io/spack/manylinux2014:latest-$arch
+          docker push ghcr.io/spack/manylinux2014:latest-$arch
+        done
+
+        # use tag pr-<number>, latest, or v* tag for multi-arch image tag.
+        if [ -n "$GITHUB_REF" ]; then
+          if [ "$GITHUB_REF" = "refs/pull/${{ github.event.pull_request.number }}/merge" ]; then
+            tag_name=pr-${{ github.event.pull_request.number }}
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            tag_name=latest
+          else
+            tag_name=${GITHUB_REF/refs\/tags\//}
+          fi
+        else
+          tag_name=latest
+        fi
+
+        docker manifest create ghcr.io/spack/manylinux2014:$tag_name \
+          ghcr.io/spack/manylinux2014:latest-x86_64 \
+          ghcr.io/spack/manylinux2014:latest-aarch64 \
+          ghcr.io/spack/manylinux2014:latest-ppc64le
+
+        docker manifest push ghcr.io/spack/manylinux2014:$tag_name
