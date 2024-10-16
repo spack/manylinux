@@ -1,4 +1,4 @@
-name: Build
+name: Create multi-arch image
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Pull manylinux images
+    - name: Create multi-arch image
       run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
