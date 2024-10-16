@@ -8,6 +8,8 @@ on:
 jobs:
   image:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
     - uses: actions/checkout@v2
     - name: Pull manylinux images
