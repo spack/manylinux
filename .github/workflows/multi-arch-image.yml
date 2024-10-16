@@ -3,7 +3,13 @@ name: Build
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+    tags:
+      - v*
   pull_request:
+    branches:
+      - main
 
 permissions:
   packages: write
@@ -23,9 +29,22 @@ jobs:
           docker push ghcr.io/spack/manylinux2014:latest-$arch
         done
 
-        docker manifest create ghcr.io/spack/manylinux2014:example \
+        # use tag pr-<number>, latest, or v* tag for multi-arch image tag.
+        if [ -n "$GITHUB_REF" ]; then
+          if [ "$GITHUB_REF" = "refs/pull/${{ github.event.pull_request.number }}/merge" ]; then
+            tag_name=pr-${{ github.event.pull_request.number }}
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            tag_name=latest
+          else
+            tag_name=${GITHUB_REF/refs\/tags\//}
+          fi
+        else
+          tag_name=latest
+        fi
+
+        docker manifest create ghcr.io/spack/manylinux2014:$tag_name \
           ghcr.io/spack/manylinux2014:latest-x86_64 \
           ghcr.io/spack/manylinux2014:latest-aarch64 \
           ghcr.io/spack/manylinux2014:latest-ppc64le
 
-        docker manifest push ghcr.io/spack/manylinux2014:example
+        docker manifest push ghcr.io/spack/manylinux2014:$tag_name
