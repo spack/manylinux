@@ -5,15 +5,18 @@ on:
   push:
   pull_request:
 
+permissions:
+  packages: write
+
 jobs:
   image:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
     steps:
     - uses: actions/checkout@v2
     - name: Pull manylinux images
       run: |
+        docker login ghcr.io -u ${{ secrets.GITHUB_ACTOR }} -p ${{ secrets.GITHUB_TOKEN }}
+
         for arch in x86_64 aarch64 ppc64le; do
           docker pull quay.io/pypa/manylinux2014_$arch
           docker tag quay.io/pypa/manylinux2014_$arch ghcr.io/spack/manylinux2014:latest-$arch
@@ -25,5 +28,4 @@ jobs:
           ghcr.io/spack/manylinux2014:latest-aarch64 \
           ghcr.io/spack/manylinux2014:latest-ppc64le
 
-        docker login ghcr.io -u ${{ secrets.GITHUB_ACTOR }} -p ${{ secrets.GITHUB_TOKEN }}
         docker manifest push ghcr.io/spack/manylinux2014:example
