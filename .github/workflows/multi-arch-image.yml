@@ -23,10 +23,18 @@ jobs:
       run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+        # manylinux2014
         for arch in x86_64 aarch64 ppc64le; do
           docker pull quay.io/pypa/manylinux2014_$arch
           docker tag quay.io/pypa/manylinux2014_$arch ghcr.io/spack/manylinux2014:latest-$arch
           docker push ghcr.io/spack/manylinux2014:latest-$arch
+        done
+
+        # manylinux_2_39
+        for arch in riscv64; do
+          docker pull quay.io/pypa/manylinux_2_39_$arch
+          docker tag quay.io/pypa/manylinux_2_39_$arch ghcr.io/spack/manylinux_2_39:latest-$arch
+          docker push ghcr.io/spack/manylinux_2_39:latest-$arch
         done
 
         # use tag pr-<number>, latest, or v* tag for multi-arch image tag.
@@ -42,9 +50,18 @@ jobs:
           tag_name=latest
         fi
 
+        # manylinux2014
         docker manifest create ghcr.io/spack/manylinux2014:$tag_name \
           ghcr.io/spack/manylinux2014:latest-x86_64 \
           ghcr.io/spack/manylinux2014:latest-aarch64 \
           ghcr.io/spack/manylinux2014:latest-ppc64le
 
         docker manifest push ghcr.io/spack/manylinux2014:$tag_name
+
+        # manylinux_2_39
+        docker manifest create ghcr.io/spack/manylinux_2_39:$tag_name \
+          ghcr.io/spack/manylinux_2_39:latest-x86_64 \
+          ghcr.io/spack/manylinux_2_39:latest-aarch64 \
+          ghcr.io/spack/manylinux_2_39:latest-ppc64le
+
+        docker manifest push ghcr.io/spack/manylinux_2_39:$tag_name
