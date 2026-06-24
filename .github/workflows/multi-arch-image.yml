@@ -60,8 +60,6 @@ jobs:
 
         # manylinux_2_39
         docker manifest create ghcr.io/spack/manylinux_2_39:$tag_name \
-          ghcr.io/spack/manylinux_2_39:latest-x86_64 \
-          ghcr.io/spack/manylinux_2_39:latest-aarch64 \
-          ghcr.io/spack/manylinux_2_39:latest-ppc64le
+          ghcr.io/spack/manylinux_2_39:latest-riscv64
 
         docker manifest push ghcr.io/spack/manylinux_2_39:$tag_name
